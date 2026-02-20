@@ -4,14 +4,14 @@ from models.user import User
 from models.review import CodeReview
 from services.ai_service import AIService
 from utils.code_analyzer import CodeAnalyzer
-from app import db
+from database import db
 from datetime import datetime
 
 review_bp = Blueprint('review', __name__)
 ai_service = AIService()
 code_analyzer = CodeAnalyzer()
 
-@review_bp.route('/', methods=['POST'])
+@review_bp.route('', methods=['POST'])
 @jwt_required()
 def create_review():
     """Submit code for AI review"""
@@ -59,7 +59,7 @@ def create_review():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
-@review_bp.route('/', methods=['GET'])
+@review_bp.route('', methods=['GET'])
 @jwt_required()
 def get_reviews():
     """Get all reviews for current user"""
