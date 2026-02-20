@@ -1,9 +1,9 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity
 from werkzeug.security import generate_password_hash, check_password_hash
-from models.user import User
-from app import db
 import re
+import traceback
+from database import db
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -28,7 +28,10 @@ def validate_password(password):
 def signup():
     """Register a new user"""
     try:
+        from models.user import User
+        
         data = request.get_json()
+        print(f"Signup data: {data}")
         
         # Validate required fields
         required_fields = ['email', 'password', 'name']
@@ -52,8 +55,8 @@ def signup():
         if User.query.filter_by(email=email).first():
             return jsonify({'error': 'Email already registered'}), 409
         
-        # Create new user
-        hashed_password = generate_password_hash(password)
+        # Create new user - use PBKDF2 for broader compatibility
+        hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
         new_user = User(
             email=email,
             password_hash=hashed_password,
@@ -76,6 +79,9 @@ def signup():
         }), 201
         
     except Exception as e:
+        
+        print(f"ERROR: {str(e)}")
+        traceback.print_exc()
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
@@ -83,6 +89,8 @@ def signup():
 def login():
     """Authenticate user and return JWT tokens"""
     try:
+        from models.user import User
+        
         data = request.get_json()
         
         if not data.get('email') or not data.get('password'):
@@ -131,6 +139,8 @@ def refresh():
 def get_current_user():
     """Get current authenticated user"""
     try:
+        from models.user import User
+        
         current_user_id = get_jwt_identity()
         user = User.query.get(current_user_id)
         
@@ -147,6 +157,8 @@ def get_current_user():
 def update_profile():
     """Update user profile"""
     try:
+        from models.user import User
+        
         current_user_id = get_jwt_identity()
         user = User.query.get(current_user_id)
         
@@ -171,5 +183,6 @@ def update_profile():
         }), 200
         
     except Exception as e:
+        
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
