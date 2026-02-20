@@ -1,4 +1,4 @@
-from app import db
+from database import db
 from datetime import datetime
 
 class CodeReview(db.Model):
@@ -8,10 +8,12 @@ class CodeReview(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     code = db.Column(db.Text, nullable=False)
     language = db.Column(db.String(50), nullable=False)
+    title = db.Column(db.String(200), nullable=True)
     quality_score = db.Column(db.Float, default=0)
     complexity_score = db.Column(db.Float, default=0)
     maintainability_index = db.Column(db.Float, default=0)
     issues_found = db.Column(db.Integer, default=0)
+    ai_feedback = db.Column(db.JSON, nullable=True)
     review_data = db.Column(db.JSON, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
@@ -19,10 +21,13 @@ class CodeReview(db.Model):
         return {
             'id': self.id,
             'user_id': self.user_id,
+            'title': self.title,
+            'code': self.code,
             'language': self.language,
             'quality_score': self.quality_score,
             'complexity_score': self.complexity_score,
             'maintainability_index': self.maintainability_index,
             'issues_found': self.issues_found,
+            'ai_feedback': self.ai_feedback,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
