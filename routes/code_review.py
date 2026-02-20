@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from models.user import User
 from models.review import CodeReview
+from models.notification import Notification
 from services.ai_service import AIService
 from utils.code_analyzer import CodeAnalyzer
 from database import db
@@ -46,6 +47,16 @@ def create_review():
         )
         
         db.session.add(review)
+        db.session.commit()
+        
+        # Create notification
+        notification = Notification(
+            user_id=current_user_id,
+            message=f'Code review for "{title}" completed successfully',
+            type='review_complete',
+            link='/code-review'
+        )
+        db.session.add(notification)
         db.session.commit()
         
         return jsonify({

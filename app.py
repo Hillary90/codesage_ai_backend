@@ -23,10 +23,12 @@ def create_app(config_class=Config):
     from routes.auth import auth_bp
     from routes.code_review import review_bp
     from routes.portfolio import portfolio_bp
+    from routes.notifications import notification_bp
     
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(review_bp, url_prefix='/api/reviews')
     app.register_blueprint(portfolio_bp, url_prefix='/api/portfolio')
+    app.register_blueprint(notification_bp, url_prefix='/api/notifications')
     
     @app.route('/health', methods=['GET'])
     def health_check():

@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from models.portfolio import Portfolio
+from models.notification import Notification
 from services.ai_service import AIService
 from services.github_service import GitHubService
 from database import db
@@ -38,6 +39,16 @@ def create_portfolio_project():
         )
         
         db.session.add(project)
+        db.session.commit()
+        
+        # Create notification
+        notification = Notification(
+            user_id=current_user_id,
+            message=f'Portfolio project "{data["name"]}" added successfully',
+            type='portfolio_added',
+            link='/portfolio'
+        )
+        db.session.add(notification)
         db.session.commit()
         
         return jsonify({
