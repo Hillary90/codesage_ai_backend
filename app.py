@@ -1,16 +1,16 @@
 from flask import Flask, jsonify
 from flask_cors import CORS
-from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager
 from config import Config
-
-db = SQLAlchemy()
+from database import db
 migrate = Migrate()
 jwt = JWTManager()
 
 def create_app(config_class=Config):
     app = Flask(__name__)
+    # Allow routes to be reached with or without trailing slashes
+    app.url_map.strict_slashes = False
     app.config.from_object(config_class)
     
     # Initialize extensions
