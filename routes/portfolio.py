@@ -3,13 +3,13 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from models.portfolio import Portfolio
 from services.ai_service import AIService
 from services.github_service import GitHubService
-from app import db
+from database import db
 
 portfolio_bp = Blueprint('portfolio', __name__)
 ai_service = AIService()
 github_service = GitHubService()
 
-@portfolio_bp.route('/', methods=['POST'])
+@portfolio_bp.route('', methods=['POST'])
 @jwt_required()
 def create_portfolio_project():
     """Add a new project to portfolio"""
@@ -29,12 +29,11 @@ def create_portfolio_project():
         # Create portfolio project
         project = Portfolio(
             user_id=current_user_id,
-            name=data['name'],
+            project_name=data['name'],
             description=description,
             tech_stack=data.get('tech_stack', []),
             github_url=data.get('github_url'),
             live_url=data.get('live_url'),
-            features=data.get('features', []),
             image_url=data.get('image_url')
         )
         
@@ -50,7 +49,7 @@ def create_portfolio_project():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
-@portfolio_bp.route('/', methods=['GET'])
+@portfolio_bp.route('', methods=['GET'])
 @jwt_required()
 def get_portfolio_projects():
     """Get all portfolio projects for current user"""
@@ -97,7 +96,7 @@ def update_portfolio_project(project_id):
         
         # Update fields
         if 'name' in data:
-            project.name = data['name']
+            project.project_name = data['name']
         if 'description' in data:
             project.description = data['description']
         if 'tech_stack' in data:
@@ -106,8 +105,6 @@ def update_portfolio_project(project_id):
             project.github_url = data['github_url']
         if 'live_url' in data:
             project.live_url = data['live_url']
-        if 'features' in data:
-            project.features = data['features']
         if 'image_url' in data:
             project.image_url = data['image_url']
         
@@ -176,11 +173,11 @@ def import_from_github():
                 
                 project = Portfolio(
                     user_id=current_user_id,
-                    name=repo['name'],
+                    project_name=repo['name'],
                     description=description,
                     tech_stack=[repo.get('language')] if repo.get('language') else [],
                     github_url=repo['html_url'],
-                    features=[repo.get('description', '')]
+                    image_url=None
                 )
                 
                 db.session.add(project)
@@ -191,6 +188,46 @@ def import_from_github():
         return jsonify({
             'message': f'Successfully imported {imported_count} projects',
             'imported_count': imported_count
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@portfolio_bp.route('/<int:project_id>/regenerate-description', methods=['POST'])
+@jwt_required()
+def regenerate_description(project_id):
+    """Regenerate AI description for a project"""
+    try:
+        current_user_id = get_jwt_identity()
+        project = Portfolio.query.filter_by(id=project_id, user_id=current_user_id).first()
+        
+        if not project:
+            return jsonify({'error': 'Project not found'}), 404
+        
+        # Try to fetch fresh data from GitHub if URL exists
+        features = ''
+        if project.github_url:
+            try:
+                repo_data = github_service.get_repository_details(project.github_url)
+                features = repo_data.get('description', '')
+            except:
+                pass
+        
+        # Generate new description
+        project_data = {
+            'name': project.project_name,
+            'tech_stack': project.tech_stack or [],
+            'features': features
+        }
+        new_description = ai_service.generate_portfolio_description(project_data)
+        
+        project.description = new_description
+        db.session.commit()
+        
+        return jsonify({
+            'message': 'Description regenerated successfully',
+            'project': project.to_dict()
         }), 200
         
     except Exception as e:
